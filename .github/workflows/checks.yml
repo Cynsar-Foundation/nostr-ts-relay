@@ -53,7 +53,11 @@ jobs:
       - name: Run coverage for unit tests
         run: npm run cover:unit
         if: ${{ always() }}
-        continue-on-error: true
+      - uses: actions/upload-artifact@v3
+        name: Upload coverage report for unit tests
+        if: ${{ always() }}
+        with:
+          path: .coverage/*/lcov.info
       - name: Coveralls
         uses: coverallsapp/github-action@master
         if: ${{ always() }}
@@ -93,7 +97,29 @@ jobs:
           flag-name: Integration
           parallel: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+      - uses: actions/upload-artifact@v3
+        name: Upload coverage report for integration tests
+        if: ${{ always() }}
+        with:
+          path: .coverage/*/lcov.info
+  sonarcloud:
+    name: Sonarcloud
+    needs: [test-units-and-cover, test-integrations-and-cover]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - uses: actions/download-artifact@v3
+      name: Download unit & integration coverage reports
+      with:
+        path: .coverage
+    - run: ls -Rl .coverage
+    - name: SonarCloud Scan
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   post-tests:
     name: Post Tests
     needs: [test-units-and-cover, test-integrations-and-cover]

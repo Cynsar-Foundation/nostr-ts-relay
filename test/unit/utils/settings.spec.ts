@@ -72,12 +72,52 @@ describe('SettingsStatic', () => {
               maxPositiveDelta: 900, // +15 min
               maxNegativeDelta: 0, // disabled
             },
+            'rateLimits': [
+              {
+                'kinds': [[0, 5], 7, [40, 49], [10000, 19999], [30000, 39999]],
+                'period': 60000,
+                'rate': 60,
+              },
+              {
+                'kinds': [[20000, 29999]],
+                'period': 60000,
+                'rate': 600,
+              },
+              {
+                'period': 3600000,
+                'rate': 3600,
+              },
+              {
+                'period': 86400000,
+                'rate': 86400,
+              },
+            ],
           },
           client: {
             subscription: {
               maxSubscriptions: 10,
               maxFilters: 10,
             },
+          },
+          message: {
+            'rateLimits': [
+              {
+                'period': 60000,
+                'rate': 600,
+              },
+              {
+                'period': 3600000,
+                'rate': 3600,
+              },
+              {
+                'period': 86400000,
+                'rate': 86400,
+              },
+            ],
+            ipWhitelist: [
+              '::1',
+              '::ffff:10.10.10.1',
+            ],
           },
         })
     })
