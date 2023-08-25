@@ -4,6 +4,7 @@ services:
       context: ../../
       dockerfile: Dockerfile.test
     environment:
+      RELAY_PORT: 18808
       DB_HOST: db-test
       DB_PORT: 5432
       DB_NAME: nostr_ts_relay_test
@@ -16,11 +17,17 @@ services:
       REDIS_USER: default
       REDIS_PASSWORD: nostr_ts_relay_test
       NOSTR_CONFIG_DIR: /code
+      DEBUG: ""
     volumes:
+      - ../../package.json:/code/package.json
+      - ../../resources:/code/resources
       - ../../src:/code/src
-      - ../../test:/code/test
+      - ../../test/integration:/code/test/integration
+      - ../../cucumber.js:/code/cucumber.js
+      - ../../.nycrc.json:/code/.nycrc.json
       - ../../.coverage:/code/.coverage
       - ../../.test-reports:/code/.test-reports
+      - ../../tsconfig.json:/code/tsconfig.json
     working_dir: /code
     depends_on:
       cache-test:
@@ -30,7 +37,7 @@ services:
       migrations-test:
         condition: service_completed_successfully
     networks:
-      - nostr-ts-relay-test
+      - nostream-test
     links:
       - db-test
   db-test:
@@ -40,17 +47,19 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nostr_ts_relay_test
     networks:
-      - nostr-ts-relay-test
+      - nostream-test
+    ports:
+      - 25432:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       timeout: 5s
-      start_period: 5s
+      start_period: 10s
       retries: 0
   cache-test:
     image: redis:7.0.5-alpine3.16
-    command: redis-server --save 20 1 --loglevel warning --requirepass nostr_ts_relay_test
+    command: redis-server --loglevel warning --requirepass nostr_ts_relay_test
     networks:
-      - nostr-ts-relay-test
+      - nostream-test
     restart: always
     healthcheck:
       test: [ "CMD", "redis-cli", "ping", "|", "grep", "PONG" ]
@@ -68,16 +77,17 @@ services:
     entrypoint:
       - sh
       - -c
-      - 'cd code && npm install --no-save --quiet knex@2.3.0 pg@8.8.0 && npx knex migrate:latest'
+      - 'cd code && npm install --no-save --quiet knex@2.4.0 pg@8.8.0 && npx knex migrate:latest'
     volumes:
       - ../../migrations:/code/migrations
       - ../../knexfile.js:/code/knexfile.js
     depends_on:
-      - db-test
+      db-test:
+        condition: service_healthy
     networks:
-      - nostr-ts-relay-test
+      - nostream-test
     links:
       - db-test
 
 networks:
-  nostr-ts-relay-test:
+  nostream-test:

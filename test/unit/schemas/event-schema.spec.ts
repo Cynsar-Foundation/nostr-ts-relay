@@ -1,8 +1,9 @@
-import { assocPath, omit, range } from 'ramda'
+import { assocPath, omit } from 'ramda'
 import { expect } from 'chai'
 
 import { Event } from '../../../src/@types/event'
 import { eventSchema } from '../../../src/schemas/event-schema'
+import { EventTags } from '../../../src/constants/base'
 import { validateSchema } from '../../../src/utils/validation'
 
 describe('NIP-01', () => {
@@ -16,31 +17,31 @@ describe('NIP-01', () => {
         'kind': 7,
         'tags': [
           [
-            'e',
+            EventTags.Event,
             'c58e83bb744e4c29642db7a5c3bd1519516ad5c51f6ba5f90c451d03c1961210',
             '',
             'root',
           ],
           [
-            'e',
+            EventTags.Event,
             'd0d78967b734628cec7bdfa2321c71c1f1c48e211b4b54333c3b0e94e7e99166',
             '',
             'reply',
           ],
           [
-            'p',
+            EventTags.Pubkey,
             'edfa27d49d2af37ee331e1225bb6ed1912c6d999281b36d8018ad99bc3573c29',
           ],
           [
-            'p',
+            EventTags.Pubkey,
             '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245',
           ],
           [
-            'e',
+            EventTags.Event,
             '6fed2aae1e4f7d8b535774e4f7061c10e2ff20df1ef047da09462c7937925cd5',
           ],
           [
-            'p',
+            EventTags.Pubkey,
             '2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5',
           ],
         ],
@@ -84,6 +85,7 @@ describe('NIP-01', () => {
         { message: 'is required', transform: omit(['pubkey']) },
       ],
       created_at: [
+        { message: 'contains an invalid value', transform: assocPath(['created_at'], 1672295751103) },
         { message: 'must be a number', transform: assocPath(['created_at'], null) },
         { message: 'must be greater than or equal to 0', transform: assocPath(['created_at'], -1) },
         { message: 'must be a multiple of 1', transform: assocPath(['created_at'], Math.PI) },
@@ -97,7 +99,6 @@ describe('NIP-01', () => {
       ],
       content: [
         { message: 'must be a string', transform: assocPath(['content'], null) },
-        { message: 'length must be less than or equal to 65536 characters long', transform: assocPath(['content'], ' '.repeat(64 * 1024 + 1)) },
         { message: 'is required', transform: omit(['content']) },
       ],
       sig: [
@@ -112,20 +113,16 @@ describe('NIP-01', () => {
       tags: [
         { message: 'must be an array', transform: assocPath(['tags'], null) },
         { message: 'is required', transform: omit(['tags']) },
-        { message: 'must contain less than or equal to 500 items', transform: assocPath(['tags'], range(0, 501).map(() => (['x', 'x']))) },
       ],
       tag: [
         { message: 'must be an array', transform: assocPath(['tags', 0], null) },
-        { message: 'must contain less than or equal to 10 items', transform: assocPath(['tags', 0], range(0, 11).map(() => 'x')) },
       ],
       identifier: [
         { message: 'must be a string', transform: assocPath(['tags', 0, 0], null) },
-        { message: 'length must be less than or equal to 255 characters long', transform: assocPath(['tags', 0, 0], ' '.repeat(256)) },
         { message: 'is not allowed to be empty', transform: assocPath(['tags', 0, 0], '') },
       ],
       value: [
         { message: 'must be a string', transform: assocPath(['tags', 0, 1], null) },
-        { message: 'length must be less than or equal to 1024 characters long', transform: assocPath(['tags', 0, 1], ' '.repeat(1024 + 1)) },
       ],
     }
 

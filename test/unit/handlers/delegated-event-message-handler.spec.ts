@@ -2,13 +2,17 @@ import chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import EventEmitter from 'events'
 import Sinon from 'sinon'
+import sinonChai from 'sinon-chai'
 
+chai.use(sinonChai)
 chai.use(chaiAsPromised)
 
 import { IncomingEventMessage, MessageType } from '../../../src/@types/messages'
 import { DelegatedEventMessageHandler } from '../../../src/handlers/delegated-event-message-handler'
 import { Event } from '../../../src/@types/event'
 import { EventMessageHandler } from '../../../src/handlers/event-message-handler'
+import { EventTags } from '../../../src/constants/base'
+import { IUserRepository } from '../../../src/@types/repositories'
 import { WebSocketAdapterEvent } from '../../../src/constants/adapter'
 
 const { expect } = chai
@@ -16,11 +20,12 @@ const { expect } = chai
 describe('DelegatedEventMessageHandler', () => {
   let webSocket: EventEmitter
   let handler: DelegatedEventMessageHandler
+  let userRepository: IUserRepository
   let event: Event
   let message: IncomingEventMessage
   let sandbox: Sinon.SinonSandbox
 
-  let originalConsoleWarn: (message?: any, ...optionalParams: any[]) => void | undefined = undefined
+  let originalConsoleWarn: any = undefined
 
   beforeEach(() => {
     sandbox = Sinon.createSandbox()
@@ -34,7 +39,7 @@ describe('DelegatedEventMessageHandler', () => {
       pubkey: 'f'.repeat(64),
       sig: 'f'.repeat(128),
       tags: [
-        ['delegation', 'delegator', 'rune', 'signature'],
+        [EventTags.Delegation, 'delegator', 'rune', 'signature'],
       ],
     }
   })
@@ -51,10 +56,12 @@ describe('DelegatedEventMessageHandler', () => {
     let onMessageSpy: Sinon.SinonSpy
     let strategyExecuteStub: Sinon.SinonStub
     let isRateLimitedStub: Sinon.SinonStub
+    let isUserAdmitted: Sinon.SinonStub
 
     beforeEach(() => {
       canAcceptEventStub = sandbox.stub(DelegatedEventMessageHandler.prototype, 'canAcceptEvent' as any)
       isEventValidStub = sandbox.stub(DelegatedEventMessageHandler.prototype, 'isEventValid' as any)
+      isUserAdmitted = sandbox.stub(EventMessageHandler.prototype, 'isUserAdmitted' as any)
       strategyExecuteStub = sandbox.stub()
       strategyFactoryStub = sandbox.stub().returns({
         execute: strategyExecuteStub,
@@ -67,6 +74,7 @@ describe('DelegatedEventMessageHandler', () => {
       handler = new DelegatedEventMessageHandler(
         webSocket as any,
         strategyFactoryStub,
+        userRepository,
         () => ({}) as any,
         () => ({ hit: async () => false }),
       )
@@ -117,6 +125,21 @@ describe('DelegatedEventMessageHandler', () => {
       expect(strategyFactoryStub).not.to.have.been.called
     })
 
+    it('rejects event is user is not admitted', async () => {
+      isUserAdmitted.resolves('not admitted')
+
+      await handler.handleMessage(message)
+
+      expect(isRateLimitedStub).to.have.been.calledOnceWithExactly(event)
+      expect(isUserAdmitted).to.have.been.calledOnceWithExactly(event)
+      expect(onMessageSpy).to.have.been.calledOnceWithExactly([
+        MessageType.OK,
+        event.id,
+        false,
+        'not admitted',
+      ])
+    })
+
     it('does not call strategy if none given', async () => {
       isEventValidStub.returns(undefined)
       canAcceptEventStub.returns(undefined)
@@ -149,9 +172,10 @@ describe('DelegatedEventMessageHandler', () => {
     })
 
     it('does not reject if strategy rejects', async () => {
+      const error = new Error('mistakes were made')
       isEventValidStub.returns(undefined)
       canAcceptEventStub.returns(undefined)
-      strategyExecuteStub.rejects()
+      strategyExecuteStub.rejects(error)
 
       return expect(handler.handleMessage(message)).to.eventually.be.fulfilled
     })
@@ -169,7 +193,7 @@ describe('DelegatedEventMessageHandler', () => {
         'kind': 1,
         'tags': [
           [
-            'delegation',
+            EventTags.Delegation,
             '86f0689bd48dcd19c67a19d994f938ee34f251d8c39976290955ff585f2db42e',
             'kind=1&created_at>1640995200',
             'c33c88ba78ec3c760e49db591ac5f7b129e3887c8af7729795e85a0588007e5ac89b46549232d8f918eefd73e726cb450135314bfda419c030d0b6affe401ec1',

@@ -6,7 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "es6",
+    "target": "ESNext",
     "outDir": "./dist",
     "moduleResolution": "Node",
     "types": ["node", "mocha", "@cucumber/cucumber"],
@@ -18,9 +18,6 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["ESNext"]
-  },
-  "ts-node": {
-    "transpileOnly": true
   },
   "include": [
     "src/**/*.ts",

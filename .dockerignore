@@ -13,3 +13,6 @@ docker-compose.yml
 Dockerfile
 *.env
 *.md
+.nostr
+postgresql.conf
+test/integration/docker-compose.yml
